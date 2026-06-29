@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="show">
+	<select id="list_event"
+		resultType="com.example.cinema.dto.EventDTO">
+		select * from event
+	</select>
+
+	<select id="detail_event"
+		resultType="com.example.cinema.dto.EventDTO">
+		select * from event where num=#{num}
+	</select>
+
+	<select id="listevent"
+		resultType="com.example.cinema.dto.EventDTO">
+		select * from event where type=#{type}
+	</select>
+	<select id="view" resultType="com.example.cinema.dto.EventDTO">
+		select * from event where
+		num=#{num}
+	</select>
+	<delete id="delete">
+		delete from event where num = #{num}
+	</delete>
+	<insert id="insert">
+		insert into event (num, type, subject, contents, filename1,filename2) values ((select nvl(max(num)+1,1) from event), #{type}, #{subject},  #{contents}, #{filename1},#{filename2})
+	</insert>
+</mapper>
