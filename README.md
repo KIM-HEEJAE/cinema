@@ -12,7 +12,7 @@
 - **Tool:** Git, GitHub
 
 ## 📊 서비스 구조 (ERD)
-![구조도_이미지_경로](./images/erdimage.png)
+![구조도_이미지_경로](./image/erdimage.png)
 *회원(Member)을 중심으로 예매(Booking), 영화(Movie), 상영시간(Time), 좌석(Seats) 테이블을 연관시켜 데이터 무결성을 고려한 관계형 데이터베이스를 설계했습니다.*
 
 ---
