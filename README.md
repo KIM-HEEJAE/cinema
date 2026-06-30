@@ -12,7 +12,7 @@
 - **Tool:** Git, GitHub
 
 ## 📊 서비스 구조 (ERD)
-![구조도_이미지_경로](./images/erd_diagram.png)
+![구조도_이미지_경로](./images/erdimage.png)
 *회원(Member)을 중심으로 예매(Booking), 영화(Movie), 상영시간(Time), 좌석(Seats) 테이블을 연관시켜 데이터 무결성을 고려한 관계형 데이터베이스를 설계했습니다.*
 
 ---
@@ -51,6 +51,6 @@
 ---
 
 ## 🔗 관련 문서
-- [자세한 프로젝트 포트폴리오 (Notion)](여기에_노션_링크)
+- [자세한 프로젝트 포트폴리오 (Notion)](https://app.notion.com/p/4969c0ef6065420f8de8b2683df40c4e?p=31f2dda151ec804f9154f0ca064d9eb6&pm=c)
 
 ---
