@@ -251,69 +251,94 @@ public class TicketController {
 	}
 	
 	//좌석 데이터 저장 후 > 예매 페이지
+	//좌석 데이터 저장 후 > 예매 페이지
 	@PostMapping("insert.do")
 	public String SeatInsert(
-			HttpSession session,
-			@RequestParam(name = "moviePrice") int buy,
-			@RequestParam(name = "theaterNum") int theaterNum,
-			@RequestParam(name = "cinemaPlace") String cinemaPlace,
-			@RequestParam(name = "movieTime") String movieTime,
-			@RequestParam(name = "time_idx") int time_idx,
-			@RequestParam(name = "seatPos") String seatPos,
-			Model model
+	        HttpSession session,
+	        @RequestParam(name = "moviePrice") int buy,
+	        @RequestParam(name = "theaterNum") int theaterNum,
+	        @RequestParam(name = "cinemaPlace") String cinemaPlace,
+	        @RequestParam(name = "movieTime") String movieTime,
+	        @RequestParam(name = "time_idx") int time_idx,
+	        @RequestParam(name = "seatPos") String seatPos,
+	        Model model
 	) {
-		//세션
-		String userid = (String) session.getAttribute("userid");
-		
-		MemberDTO dto=new MemberDTO();
-		dto.setUserid(userid);
-		dto.setBuy(buy);
-		
-		//UPDATE member SET buy=buy + #{buy} WHERE userid = #{userid}
-		
-		memberDao.buy(dto);	
-		
-		
-		// 문자열 time 을 date 타입으로 바꾸기
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-		java.util.Date datetime = null;
-		java.sql.Date sqlDate = null;
-		try {
-			datetime = dateFormat.parse(movieTime);
-			// java.util.Date를 java.sql.Date로 변환
-			sqlDate = new java.sql.Date(datetime.getTime());
-		} catch (ParseException e) {
-			e.printStackTrace();
-		}
-		
-		String[] seatList = seatPos.split(",");
-		SeatDTO Sdto = new SeatDTO();
-		for (int i = 0; i < seatList.length; i++) { // 선택한 좌석 수만큼 반복
+	    // 세션
+	    String userid = (String) session.getAttribute("userid");
+	    if (userid == null || userid.equals("")) {
+	        return "redirect:/ticket/book_tickets.do?movieCd=" + time_idx + "&message=error";
+	    }
 
-			Sdto.setUserid(userid);
-			Sdto.setTheater_num(theaterNum);
-			Sdto.setSeat_name(seatList[i]);
-			Sdto.setCinema_place(cinemaPlace);
-			Sdto.setTime(sqlDate);
+	    // 문자열 time 을 date 타입으로 바꾸기
+	    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+	    java.util.Date datetime = null;
+	    java.sql.Date sqlDate = null;
+	    try {
+	        datetime = dateFormat.parse(movieTime);
+	        sqlDate = new java.sql.Date(datetime.getTime());
+	    } catch (ParseException e) {
+	        e.printStackTrace();
+	        return "redirect:/ticket/list.do?error=invalid_time";
+	    }
 
-			seatDao.insert_seat(Sdto); // 좌석 데이터베이스에 추가
+	    String[] seatList = seatPos.split(",");
 
-			int ticket_idx = seatDao.getTicketIdx(Sdto); // 추가하면서 생성된 ticket_idx 가져오기
+	    // ① 좌석 중복 예약 방지 — 서버에서 다시 한 번 확인
+	    SeatDTO checkDto = new SeatDTO();
+	    checkDto.setTheater_num(theaterNum);
+	    checkDto.setCinema_place(cinemaPlace);
+	    checkDto.setTime(sqlDate);
 
-			Map<String, Object> map = new HashMap<String, Object>();
-			map.put("ticket_idx", ticket_idx);
-			map.put("time_idx", time_idx);
-			map.put("userid", userid);
+	    List<SeatDTO> alreadyBooked = seatDao.savedSeats(checkDto);
+	    List<String> bookedNames = new ArrayList<>();
+	    for (SeatDTO s : alreadyBooked) {
+	        bookedNames.add(s.getSeat_name());
+	    }
+	    for (String seatName : seatList) {
+	        if (bookedNames.contains(seatName)) {
+	            // 이미 다른 사람이 먼저 예약한 좌석이 섞여 있으면 예매 자체를 막는다
+	            return "redirect:/ticket/list.do?error=seat_taken";
+	        }
+	    }
 
-			seatDao.insert_tickets(map); // 예약 테이블에 티켓 추가
-		}
+	    // ② 결제 금액 서버 재검증
+	    int PRICE_PER_SEAT = 13000;  
+	    int expectedPrice = PRICE_PER_SEAT * seatList.length;
+	    if (buy != expectedPrice) {
+	        // 클라이언트가 보낸 금액이 서버 계산값과 다르면 예매를 막는다
+	        return "redirect:/ticket/list.do?error=price_mismatch";
+	    }
 
-		// 예매 리스트 불러오기
-		List<Map<String, Object>> bookTickets = seatDao.Tickets(userid);
-		model.addAttribute("bookTickets", bookTickets);
+	    // 검증을 통과한 경우에만 실제 저장 진행
+	    MemberDTO dto = new MemberDTO();
+	    dto.setUserid(userid);
+	    dto.setBuy(buy);
+	    memberDao.buy(dto);
 
-		// 마이페이지와 연결
-		return "ticket/result";
+	    SeatDTO Sdto = new SeatDTO();
+	    for (int i = 0; i < seatList.length; i++) {
+	        Sdto.setUserid(userid);
+	        Sdto.setTheater_num(theaterNum);
+	        Sdto.setSeat_name(seatList[i]);
+	        Sdto.setCinema_place(cinemaPlace);
+	        Sdto.setTime(sqlDate);
+
+	        seatDao.insert_seat(Sdto);
+
+	        int ticket_idx = seatDao.getTicketIdx(Sdto);
+
+	        Map<String, Object> map = new HashMap<>();
+	        map.put("ticket_idx", ticket_idx);
+	        map.put("time_idx", time_idx);
+	        map.put("userid", userid);
+
+	        seatDao.insert_tickets(map);
+	    }
+
+	    List<Map<String, Object>> bookTickets = seatDao.Tickets(userid);
+	    model.addAttribute("bookTickets", bookTickets);
+
+	    return "ticket/result";
 	}
 	
 	@GetMapping("list.do")
